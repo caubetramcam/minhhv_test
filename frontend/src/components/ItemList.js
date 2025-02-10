@@ -280,7 +280,7 @@ const ItemList = () => {
     multiple: true,
     maxCount: 5,
     listType: "picture-card",
-    action: `${process.env.REACT_APP_API_URL_ROOT}/upload/file`,
+    action: `http://localhost:3000/api/upload/file`,
     beforeUpload: (file) => {
       const isImage = file.type.startsWith("image/");
       if (!isImage) {

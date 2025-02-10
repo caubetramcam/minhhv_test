@@ -5,6 +5,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . .
+
+# Set environment variables
+ARG REACT_APP_API_URL_ROOT
+ENV REACT_APP_API_URL_ROOT=${REACT_APP_API_URL_ROOT}
+
 RUN npm run build
 
 # Use Nginx for serving the build files

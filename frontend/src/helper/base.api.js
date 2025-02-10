@@ -16,7 +16,7 @@ const convertApiErrData = (data) => {
 };
 
 const instance = axios.create({
-  baseURL: REACT_APP_API_URL_ROOT,
+  baseURL: 'http://localhost:3000/api', //process.env.REACT_APP_API_URL_ROOT,
   headers: {
     "Content-Type": "application/json",
   },
