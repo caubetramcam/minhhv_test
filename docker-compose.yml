@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  mssql:
+    container_name: mssql
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: always
+    environment:
+      SA_PASSWORD: "${DB_PASSWORD}"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1333:1433"
+    networks:
+      - my-network
+    volumes:
+      - mssql_data:/var/opt/mssql
+    command: >
+      /bin/bash -c "
+      /opt/mssql/bin/sqlservr & 
+      sleep 20 && 
+      /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -C -Q 'IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = \"test\") CREATE DATABASE test;' &&
+      wait
+      "
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -C -d master -Q 'IF DB_ID('${DB_NAME}') IS NOT NULL SELECT 1' || exit 1"
+      ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+    user: "0:0"
+
+  be:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: be
+    restart: always
+    depends_on:
+      mssql:
+        condition: service_healthy
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - DB_HOST=mssql
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - PORT=${PORT}
+      - NODE_ENV=production
+      - JWT_SECRET_KEY=secret
+      - JWT_EXPIRATION_TIME=1d
+      - URL_FILE_CDN=${URL_FILE_CDN}
+    networks:
+      - my-network
+    command: [ "sh", "-c", "npm run migration:prod:run && npm run start:prod" ]
+  fe:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fe
+    restart: always
+    depends_on:
+      - be
+    ports:
+      - "8080:80"
+    environment:
+      - REACT_APP_API_URL_ROOT=http://localhost:3000/api
+    stdin_open: true
+    tty: true
+networks:
+  my-network:
+
+volumes:
+  mssql_data:
